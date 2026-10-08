@@ -15,7 +15,10 @@ export const DEFAULT_PI_AGENT = {
 	model: "deepseek-v4-pro",
 } as const;
 
-/** Where Pi coding tools (read, bash, edit, …) run for auction runs. */
+/** Built-in Pi tools for this repo (read-only; no bash/edit/write). */
+export const DEFAULT_PI_TOOLS = ["read", "grep", "find", "ls"] as const;
+
+/** Where Pi coding tools run for auction runs. */
 export const DEMO_PROJECT_CWD = `${import.meta.dir}/demo-project`;
 
 export type PiAgentConfig = {
@@ -27,7 +30,7 @@ export type PiAgentConfig = {
 };
 
 export type RunPiAgentOptions = PiAgentConfig & {
-	/** Merged with Pi's default coding tools (read, bash, edit, write, …). */
+	/** Registered alongside {@link DEFAULT_PI_TOOLS} (allowlisted by name). */
 	customTools?: ToolDefinition[];
 	/** When set, return that tool's `details` instead of assistant text. */
 	returnTool?: string;
@@ -99,6 +102,11 @@ function sessionManagerForTurn(cwd: string, options: RunPiAgentTurnOptions): Ses
 	return SessionManager.create(cwd);
 }
 
+function sessionTools(customTools?: ToolDefinition[]): string[] {
+	const names = customTools?.map((tool) => tool.name) ?? [];
+	return [...DEFAULT_PI_TOOLS, ...names];
+}
+
 async function createPiSession(options: RunPiAgentOptions, sessionManager: SessionManager) {
 	const provider = options.provider ?? DEFAULT_PI_AGENT.provider;
 	const modelId = options.model ?? DEFAULT_PI_AGENT.model;
@@ -124,6 +132,7 @@ async function createPiSession(options: RunPiAgentOptions, sessionManager: Sessi
 		modelRuntime,
 		sessionManager,
 		cwd,
+		tools: sessionTools(options.customTools),
 		...(options.customTools ? { customTools: options.customTools } : {}),
 	});
 }
