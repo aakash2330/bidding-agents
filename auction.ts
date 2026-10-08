@@ -1,4 +1,4 @@
-import { runPiAgentTurn } from "./pi.ts";
+import { DEMO_PROJECT_CWD, runPiAgentTurn } from "./pi.ts";
 import {
     DECOMPOSE_TASKS_TOOL_NAME,
     decomposeTasksTool,
@@ -24,19 +24,12 @@ const agentPersonalitiesDescriptions = {
     [AgentPersonality.MARKETER]: "A marketer who is responsible for the marketing of the product.",
 }
 
-type Agent = {
-    sessionId: string;
-    personality: AgentPersonality;
-    credits: number;
-    personalityDescription: string;
-}
-
 type Task = {
     title: string;
     description: string;
 }
 
-type TaskWithAgentOpinions = Task & {
+export type TaskWithAgentOpinions = Task & {
     agentsOpinions: Record<AgentPersonality, AgentOpinion>;
 }
 
@@ -44,26 +37,59 @@ type AgentOpinion = AgentBid;
 
 class Agent {
     constructor(
-        private readonly sessionId: string = crypto.randomUUID(),
-        private readonly personality: AgentPersonality,
-        private readonly credits: number,
-        private readonly personalityDescription: string,
+        private readonly sessionId: string,
+        public readonly personality: AgentPersonality,
+        private credits: number,
     ) {
     }
 
-    public async run(task: Task): Promise<AgentOpinion> {
+    public async bid(task: Task): Promise<AgentOpinion> {
+        return this.submitBid(
+            task,
+            "Submit your final bid, opinion, and a strong reason defending your opinion for this task.",
+            false,
+        );
+    }
+
+    public async verify(
+        task: Task,
+        agentsOpinions: Record<AgentPersonality, AgentOpinion>,
+    ): Promise<AgentOpinion> {
+        const summary = Object.entries(agentsOpinions)
+            .map(([personality, { bid, opinion, reason }]) =>
+                `- ${personality}: ${bid} credits — ${opinion}\n  Reason: ${reason}`)
+            .join("\n");
+        const mine = agentsOpinions[this.personality];
+        return this.submitBid(
+            task,
+            [
+                "All agents' bids for this task:",
+                summary,
+                "",
+                `Your previous bid: ${mine.bid} credits — ${mine.opinion}`,
+                `Your previous reason: ${mine.reason}`,
+                "",
+                "Review the full list. Submit your bid again if you want to change it, or the same bid if you stand by your decision.",
+            ].join("\n"),
+            true,
+        );
+    }
+
+    private async submitBid(task: Task, instruction: string, resume: boolean): Promise<AgentOpinion> {
         const { reply } = await runPiAgentTurn(
             [
-                `You are ${this.personalityDescription}`,
+                `You are ${agentPersonalitiesDescriptions[this.personality]}`,
                 `You have ${this.credits} credits available.`,
                 "",
                 `Task: ${task.title}`,
                 task.description,
                 "",
-                "Submit your final bid and opinion for this task.",
+                instruction,
             ].join("\n"),
             {
+                cwd: DEMO_PROJECT_CWD,
                 sessionId: this.sessionId,
+                resume,
                 customTools: [submitBidTool],
                 returnTool: SUBMIT_BID_TOOL_NAME,
             },
@@ -73,42 +99,54 @@ class Agent {
 }
 
 class Auction {
+    private input: string = "";
     private agents: Agent[] = [];
-    private tasks: Task[] = [];
+    private tasks: TaskWithAgentOpinions[] = [];
 
     constructor(
-        private readonly input: string,
-        private readonly agentPersonalities: AgentPersonality[],
-    ) { }
+        input: string,
+    ) {
+        this.input = input;
+    }
 
-    async initialize(): Promise<void> {
-        this.agents = this.createAgents(this.agentPersonalities);
+    public async initialize(agentPersonalities: AgentPersonality[]): Promise<void> {
+        this.agents = this.createAgents(agentPersonalities);
         this.tasks = await this.planTask(this.input);
     }
 
+
+    public async startAuction(): Promise<TaskWithAgentOpinions[]> {
+        for (const task of this.tasks) {
+            await this.collectOpinions(task, (agent) => agent.bid(task));
+            await this.collectOpinions(task, (agent) => agent.verify(task, task.agentsOpinions));
+        }
+        return this.tasks;
+    }
+
     private createAgents(agentPersonalities: AgentPersonality[]): Agent[] {
-        return agentPersonalities.map(personality => ({
-            sessionId: "",
-            personality,
-            credits: INITIAL_CREDITS,
-            personalityDescription: agentPersonalitiesDescriptions[personality],
-        }));
+        return agentPersonalities.map(personality => new Agent(crypto.randomUUID(), personality, INITIAL_CREDITS));
+    }
+
+    private async collectOpinions(
+        task: TaskWithAgentOpinions,
+        ask: (agent: Agent) => Promise<AgentOpinion>,
+    ): Promise<void> {
+        const entries = await Promise.all(
+            this.agents.map(async (agent) => {
+                const opinion = await ask(agent);
+                console.log(`${agent.personality} bid ${opinion.bid} for task ${task.title}`);
+                return [agent.personality, opinion] as const;
+            }),
+        );
+        task.agentsOpinions = Object.fromEntries(entries) as Record<AgentPersonality, AgentOpinion>;
     }
 
 
-    private function startAuction(): Promise<void> {
-    }
-
-    bidForTask(task: Task): Promise<void> {
-    }
-
-    verifyBids(): Promise<void> { }
-
-
-    private async planTask(taskDescription: string): Promise<Task[]> {
+    private async planTask(taskDescription: string): Promise<TaskWithAgentOpinions[]> {
         const { reply } = await runPiAgentTurn(
             `Break this goal into concrete, ordered tasks:\n\n${taskDescription}`,
             {
+                cwd: DEMO_PROJECT_CWD,
                 customTools: [decomposeTasksTool],
                 returnTool: DECOMPOSE_TASKS_TOOL_NAME,
             },
@@ -119,8 +157,8 @@ class Auction {
             title: task.title,
             description: task.description,
             agentsOpinions: Object.fromEntries(
-                this.agents.map(agent => [agent.personality, { bid: 0, opinion: "" }]),
-            ) as Record<AgentPersonality, { bid: number, opinion: string }>,
+                this.agents.map(agent => [agent.personality, { bid: 0, opinion: "", reason: "" }]),
+            ) as Record<AgentPersonality, AgentBid>,
         }));
     }
 }

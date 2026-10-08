@@ -15,6 +15,9 @@ export const DEFAULT_PI_AGENT = {
 	model: "deepseek-v4-pro",
 } as const;
 
+/** Where Pi coding tools (read, bash, edit, …) run for auction runs. */
+export const DEMO_PROJECT_CWD = `${import.meta.dir}/demo-project`;
+
 export type PiAgentConfig = {
 	provider?: string;
 	model?: string;
