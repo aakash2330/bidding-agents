@@ -1,0 +1,22 @@
+---
+description: Bidding-agents project conventions (tests, Pi sessions, ponytail)
+alwaysApply: true
+---
+
+# Project conventions
+
+## Implementation style (ponytail)
+
+For every task in this repo, read and follow the **ponytail** skill before writing or changing code: `/Users/aakashsingh/.claude/skills/ponytail/SKILL.md` (shortest working diff, YAGNI, no unrequested tests/abstractions). Default intensity: **full** unless the user says otherwise.
+
+## Tests
+
+Do not add or expand test files unless the user explicitly asks for tests.
+
+## Pi agent sessions (`pi.ts`)
+
+- Use `runPiAgentTurn` for multi-turn bidder agents; `runPiAgent` stays one-shot in-memory (e.g. task decomposition).
+- Track **`sessionId` only** — do not return or require `sessionFile` in the public API.
+- First turn: pass a custom `sessionId` (e.g. `auction-designer`) or omit it for Pi to generate one. Same `cwd` on every turn.
+- Later turns: `{ sessionId, resume: true }`.
+- Pi session id format: alphanumeric, `-`, `_`, `.`; must start and end with alphanumeric.

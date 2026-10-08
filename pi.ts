@@ -29,6 +29,22 @@ export type RunPiAgentOptions = PiAgentConfig & {
 	returnTool?: string;
 };
 
+export type RunPiAgentTurnOptions = RunPiAgentOptions & {
+	/**
+	 * Session id. With `resume: true`, opens that session under `cwd`.
+	 * Without `resume`, starts a new persisted session with this id (Pi generates one if omitted).
+	 * Id: alphanumeric, `-`, `_`, `.`; must start and end with alphanumeric.
+	 */
+	sessionId?: string;
+	/** Open an existing `sessionId` and append. Omit to start a new session (optionally with `sessionId`). */
+	resume?: boolean;
+};
+
+export type PiAgentTurnResult = {
+	reply: string | unknown;
+	sessionId: string;
+};
+
 function assertSessionSucceeded(session: { state: { messages: readonly unknown[] } }): void {
 	const last = session.state.messages.at(-1) as
 		| { role?: string; stopReason?: string; errorMessage?: string }
@@ -48,12 +64,41 @@ function getToolResultDetails<T>(messages: readonly unknown[], toolName: string)
 	throw new Error(`Expected tool result from ${toolName}`);
 }
 
-export async function runPiAgent(
-	prompt: string,
-	options: RunPiAgentOptions = {},
-): Promise<string | unknown> {
+function resolveReply(
+	session: { state: { messages: readonly unknown[] }; getLastAssistantText: () => string | undefined },
+	returnTool?: string,
+): string | unknown {
+	if (returnTool) {
+		return getToolResultDetails(session.state.messages, returnTool);
+	}
+	return session.getLastAssistantText() ?? "";
+}
+
+function sessionManagerForTurn(cwd: string, options: RunPiAgentTurnOptions): SessionManager {
+	if (options.resume) {
+		if (!options.sessionId) {
+			throw new Error("sessionId is required when resume is true");
+		}
+		const ref = options.sessionId;
+		const path =
+			ref.includes("/") || ref.endsWith(".jsonl")
+				? ref
+				: SessionManager.findById(cwd, ref);
+		if (!path) {
+			throw new Error(`No session found for id: ${ref}`);
+		}
+		return SessionManager.open(path, undefined, cwd);
+	}
+	if (options.sessionId) {
+		return SessionManager.create(cwd, undefined, { id: options.sessionId });
+	}
+	return SessionManager.create(cwd);
+}
+
+async function createPiSession(options: RunPiAgentOptions, sessionManager: SessionManager) {
 	const provider = options.provider ?? DEFAULT_PI_AGENT.provider;
 	const modelId = options.model ?? DEFAULT_PI_AGENT.model;
+	const cwd = options.cwd ?? process.cwd();
 
 	const modelRuntime = await ModelRuntime.create();
 	if (options.apiKey) {
@@ -69,22 +114,52 @@ export async function runPiAgent(
 		throw new Error(resolved.error ?? `Unknown model ${provider}/${modelId}`);
 	}
 
-	const { session } = await createAgentSession({
+	return createAgentSession({
 		model: resolved.model,
 		thinkingLevel: resolved.thinkingLevel ?? options.thinkingLevel,
 		modelRuntime,
-		sessionManager: SessionManager.inMemory(),
-		cwd: options.cwd ?? process.cwd(),
+		sessionManager,
+		cwd,
 		...(options.customTools ? { customTools: options.customTools } : {}),
 	});
+}
+
+export async function runPiAgent(
+	prompt: string,
+	options: RunPiAgentOptions = {},
+): Promise<string | unknown> {
+	const { session } = await createPiSession(options, SessionManager.inMemory());
 
 	try {
 		await session.prompt(prompt);
 		assertSessionSucceeded(session);
-		if (options.returnTool) {
-			return getToolResultDetails(session.state.messages, options.returnTool);
-		}
-		return session.getLastAssistantText() ?? "";
+		return resolveReply(session, options.returnTool);
+	} finally {
+		session.dispose();
+	}
+}
+
+/** One turn in a file-backed session. Returns `sessionId` for a later turn with `resume: true`. */
+export async function runPiAgentTurn(
+	prompt: string,
+	options: RunPiAgentTurnOptions = {},
+): Promise<PiAgentTurnResult> {
+	const cwd = options.cwd ?? process.cwd();
+	const { session, modelFallbackMessage } = await createPiSession(
+		options,
+		sessionManagerForTurn(cwd, options),
+	);
+	if (modelFallbackMessage) {
+		console.warn(modelFallbackMessage);
+	}
+
+	try {
+		await session.prompt(prompt);
+		assertSessionSucceeded(session);
+		return {
+			reply: resolveReply(session, options.returnTool),
+			sessionId: session.sessionId,
+		};
 	} finally {
 		session.dispose();
 	}
