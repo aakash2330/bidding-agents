@@ -8,6 +8,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 export type { DecomposedTask, TaskDecomposition } from "./tools/decompose-tasks.ts";
+export type { AgentBid } from "./tools/submit-bid.ts";
 
 export const DEFAULT_PI_AGENT = {
 	provider: "deepseek",
@@ -124,22 +125,7 @@ async function createPiSession(options: RunPiAgentOptions, sessionManager: Sessi
 	});
 }
 
-export async function runPiAgent(
-	prompt: string,
-	options: RunPiAgentOptions = {},
-): Promise<string | unknown> {
-	const { session } = await createPiSession(options, SessionManager.inMemory());
-
-	try {
-		await session.prompt(prompt);
-		assertSessionSucceeded(session);
-		return resolveReply(session, options.returnTool);
-	} finally {
-		session.dispose();
-	}
-}
-
-/** One turn in a file-backed session. Returns `sessionId` for a later turn with `resume: true`. */
+/** One user prompt in a file-backed session. Returns `sessionId` for a later turn with `resume: true`. */
 export async function runPiAgentTurn(
 	prompt: string,
 	options: RunPiAgentTurnOptions = {},
