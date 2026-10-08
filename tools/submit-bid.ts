@@ -20,7 +20,9 @@ export const submitBidTool = defineTool({
 	],
 	parameters: Type.Object({
 		bid: Type.Number({ description: "Credits to bid for this task" }),
-		opinion: Type.String({ description: "Your opinion on the task and how you would approach it" }),
+		opinion: Type.String({
+			description: "How you would approach and implement this task from your role",
+		}),
 		reason: Type.String({ description: "A strong argument defending your opinion and bid" }),
 	}),
 

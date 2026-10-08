@@ -46,7 +46,11 @@ class Agent {
     public async bid(task: Task): Promise<AgentOpinion> {
         return this.submitBid(
             task,
-            "Submit your final bid, opinion, and a strong reason defending your opinion for this task.",
+            [
+                "Submit your bid, opinion, and reason.",
+                "In opinion: how you would do this task from your role — your plan and any calls you would make.",
+                "In reason: why your role should own this lot and why your approach is strong.",
+            ].join(" "),
             false,
         );
     }
@@ -173,8 +177,24 @@ export class Auction {
 
 
     private async planTask(taskDescription: string): Promise<TaskWithAgentOpinions[]> {
+        const bidderRoles = Object.entries(agentPersonalitiesDescriptions)
+            .map(([role, desc]) => `- ${role}: ${desc}`)
+            .join("\n");
         const { reply } = await runPiAgentTurn(
-            `Break this goal into concrete, ordered tasks:\n\n${taskDescription}`,
+            [
+                "You are the auction planner for a small product team.",
+                "Break the goal below into ordered auction lots (one bid round per lot).",
+                "",
+                "Bidders (each lot is shown to all of them; they bid credits and argue for their approach):",
+                bidderRoles,
+                "",
+                "Each lot is a clear task brief: enough context to act on, without prescribing how bidders must solve it.",
+                "You may name open judgment calls as questions only — no answer options; bidders supply their own opinions.",
+                "Explore the repo with your tools when the goal depends on what is already there.",
+                "",
+                "Goal:",
+                taskDescription,
+            ].join("\n"),
             {
                 cwd: DEMO_PROJECT_CWD,
                 customTools: [decomposeTasksTool],
