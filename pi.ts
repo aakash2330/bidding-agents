@@ -15,10 +15,8 @@ export const DEFAULT_PI_AGENT = {
 	model: "deepseek-v4-pro",
 } as const;
 
-/** Built-in Pi tools for this repo (read-only; no bash/edit/write). */
 export const DEFAULT_PI_TOOLS = ["read", "grep", "find", "ls"] as const;
 
-/** Where Pi coding tools run for auction runs. */
 export const DEMO_PROJECT_CWD = `${import.meta.dir}/demo-project`;
 
 export type PiAgentConfig = {
@@ -30,20 +28,12 @@ export type PiAgentConfig = {
 };
 
 export type RunPiAgentOptions = PiAgentConfig & {
-	/** Registered alongside {@link DEFAULT_PI_TOOLS} (allowlisted by name). */
 	customTools?: ToolDefinition[];
-	/** When set, return that tool's `details` instead of assistant text. */
 	returnTool?: string;
 };
 
 export type RunPiAgentTurnOptions = RunPiAgentOptions & {
-	/**
-	 * Session id. With `resume: true`, opens that session under `cwd`.
-	 * Without `resume`, starts a new persisted session with this id (Pi generates one if omitted).
-	 * Id: alphanumeric, `-`, `_`, `.`; must start and end with alphanumeric.
-	 */
 	sessionId?: string;
-	/** Open an existing `sessionId` and append. Omit to start a new session (optionally with `sessionId`). */
 	resume?: boolean;
 };
 
@@ -137,7 +127,6 @@ async function createPiSession(options: RunPiAgentOptions, sessionManager: Sessi
 	});
 }
 
-/** One user prompt in a file-backed session. Returns `sessionId` for a later turn with `resume: true`. */
 export async function runPiAgentTurn(
 	prompt: string,
 	options: RunPiAgentTurnOptions = {},
