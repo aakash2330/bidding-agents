@@ -12,7 +12,7 @@ import {
 
 const INITIAL_CREDITS = 1000;
 
-enum AgentPersonality {
+export enum AgentPersonality {
     DESIGNER = "designer",
     ENGINEER = "engineer",
     MARKETER = "marketer",
@@ -94,11 +94,21 @@ class Agent {
                 returnTool: SUBMIT_BID_TOOL_NAME,
             },
         );
-        return reply as AgentOpinion;
+        const opinion = reply as AgentOpinion;
+        if (!Number.isInteger(opinion.bid) || opinion.bid < 0 || opinion.bid > this.credits) {
+            throw new Error(
+                `Invalid bid ${opinion.bid} for ${this.personality}; ${this.credits} credits available`,
+            );
+        }
+        return opinion;
+    }
+
+    public deductCredits(amount: number): void {
+        this.credits -= amount;
     }
 }
 
-class Auction {
+export class Auction {
     private input: string = "";
     private agents: Agent[] = [];
     private tasks: TaskWithAgentOpinions[] = [];
@@ -111,14 +121,26 @@ class Auction {
 
     public async initialize(agentPersonalities: AgentPersonality[]): Promise<void> {
         this.agents = this.createAgents(agentPersonalities);
+        console.log(`Agents: ${agentPersonalities.join(", ")}`);
+        console.log("Decomposing goal into tasks…");
         this.tasks = await this.planTask(this.input);
+        console.log(`${this.tasks.length} task(s):`);
+        for (const t of this.tasks) {
+            console.log(`  • ${t.title}`);
+        }
     }
 
 
     public async startAuction(): Promise<TaskWithAgentOpinions[]> {
-        for (const task of this.tasks) {
-            await this.collectOpinions(task, (agent) => agent.bid(task));
-            await this.collectOpinions(task, (agent) => agent.verify(task, task.agentsOpinions));
+        for (const [i, task] of this.tasks.entries()) {
+            console.log(`\n[${i + 1}/${this.tasks.length}] ${task.title}`);
+            await this.collectOpinions(task, "Initial bids", (agent) => agent.bid(task));
+            await this.collectOpinions(
+                task,
+                "Verification",
+                (agent) => agent.verify(task, task.agentsOpinions),
+                true,
+            );
         }
         return this.tasks;
     }
@@ -129,16 +151,24 @@ class Auction {
 
     private async collectOpinions(
         task: TaskWithAgentOpinions,
+        phase: string,
         ask: (agent: Agent) => Promise<AgentOpinion>,
+        deductCredits = false,
     ): Promise<void> {
+        console.log(`  ${phase}:`);
         const entries = await Promise.all(
             this.agents.map(async (agent) => {
                 const opinion = await ask(agent);
-                console.log(`${agent.personality} bid ${opinion.bid} for task ${task.title}`);
+                console.log(`    ${agent.personality}: ${opinion.bid} credits — ${opinion.opinion}`);
                 return [agent.personality, opinion] as const;
             }),
         );
         task.agentsOpinions = Object.fromEntries(entries) as Record<AgentPersonality, AgentOpinion>;
+        if (deductCredits) {
+            for (const agent of this.agents) {
+                agent.deductCredits(task.agentsOpinions[agent.personality].bid);
+            }
+        }
     }
 
 

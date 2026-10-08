@@ -1,9 +1,9 @@
+import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import {
 	createAgentSession,
 	ModelRuntime,
 	resolveCliModel,
 	SessionManager,
-	type ThinkingLevel,
 	type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 

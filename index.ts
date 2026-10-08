@@ -1,6 +1,17 @@
-import { runPiAgentTurn } from "./pi.ts";
+import { AgentPersonality, Auction } from "./auction.ts";
 
-const prompt = process.argv.slice(2).join(" ").trim() || "Say hello in one sentence.";
+const goal =
+    process.argv.slice(2).join(" ").trim() ||
+    "create a landing page for a barber shop";
 
-const { reply } = await runPiAgentTurn(prompt);
-console.log(reply);
+console.log(`Goal: ${goal}\n`);
+
+const auction = new Auction(goal);
+await auction.initialize([
+    AgentPersonality.DESIGNER,
+    AgentPersonality.ENGINEER,
+    AgentPersonality.MARKETER,
+]);
+
+console.log("\nAuction\n");
+await auction.startAuction();
