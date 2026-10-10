@@ -35,6 +35,7 @@ export type RunPiAgentOptions = PiAgentConfig & {
 export type RunPiAgentTurnOptions = RunPiAgentOptions & {
 	sessionId?: string;
 	resume?: boolean;
+	persona?: string;
 };
 
 export type PiAgentTurnResult = {
@@ -140,6 +141,14 @@ export async function runPiAgentTurn(
 		console.warn(modelFallbackMessage);
 	}
 
+	const unsub = session.subscribe((event) => {
+		if (event.type !== "tool_execution_start") {
+			return;
+		}
+		const who = options.persona ?? "?";
+		console.log(`[${session.sessionId}] ${who} ${event.toolName}`, event.args);
+	});
+
 	try {
 		await session.prompt(prompt);
 		assertSessionSucceeded(session);
@@ -148,6 +157,7 @@ export async function runPiAgentTurn(
 			sessionId: session.sessionId,
 		};
 	} finally {
+		unsub();
 		session.dispose();
 	}
 }

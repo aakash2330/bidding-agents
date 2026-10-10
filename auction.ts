@@ -9,6 +9,7 @@ import {
     submitBidTool,
     type AgentBid,
 } from "./tools/submit-bid.ts";
+import { agentPersonas } from "./personas/load.ts";
 
 const INITIAL_CREDITS = 1000;
 
@@ -16,12 +17,6 @@ export enum AgentPersonality {
     DESIGNER = "designer",
     ENGINEER = "engineer",
     MARKETER = "marketer",
-}
-
-const agentPersonalitiesDescriptions = {
-    [AgentPersonality.DESIGNER]: "A designer who is responsible for the design of the product.",
-    [AgentPersonality.ENGINEER]: "An engineer who is responsible for the engineering of the product.",
-    [AgentPersonality.MARKETER]: "A marketer who is responsible for the marketing of the product.",
 }
 
 type Task = {
@@ -35,7 +30,34 @@ export type TaskWithAgentOpinions = Task & {
 
 type AgentOpinion = AgentBid;
 
+function buildAuctionBrief(
+    goal: string,
+    participants: AgentPersonality[],
+    lotTitles: string[],
+): string {
+    const roster = participants
+        .map((role) => `- ${role}: ${agentPersonas[role].summary}`)
+        .join("\n");
+    const lots = lotTitles.map((title, i) => `${i + 1}. ${title}`).join("\n");
+    return [
+        "## Auction",
+        `Goal: ${goal}`,
+        "",
+        "Ordered lots are auctioned one at a time. Each lot: submit_bid, then see every bidder's bids, then submit_bid again.",
+        `Your final bid for a lot is deducted from your balance. Starting balance: ${INITIAL_CREDITS} credits across all lots.`,
+        "",
+        "Participants:",
+        roster,
+        "",
+        "Lots (full brief when each lot opens):",
+        lots,
+    ].join("\n");
+}
+
 class Agent {
+    private auctionBrief = "";
+    private sessionStarted = false;
+
     constructor(
         private readonly sessionId: string,
         public readonly personality: AgentPersonality,
@@ -43,61 +65,61 @@ class Agent {
     ) {
     }
 
+    setAuctionBrief(brief: string): void {
+        this.auctionBrief = brief;
+    }
+
     public async bid(task: Task): Promise<AgentOpinion> {
         return this.submitBid(
-            task,
             [
                 "Submit your bid, opinion, and reason.",
                 "In opinion: how you would do this task from your role — your plan and any calls you would make.",
                 "In reason: why your role should own this lot and why your approach is strong.",
             ].join(" "),
-            false,
+            task,
         );
     }
 
     public async verify(
-        task: Task,
         agentsOpinions: Record<AgentPersonality, AgentOpinion>,
     ): Promise<AgentOpinion> {
         const summary = Object.entries(agentsOpinions)
             .map(([personality, { bid, opinion, reason }]) =>
                 `- ${personality}: ${bid} credits — ${opinion}\n  Reason: ${reason}`)
             .join("\n");
-        const mine = agentsOpinions[this.personality];
         return this.submitBid(
-            task,
             [
                 "All agents' bids for this task:",
                 summary,
                 "",
-                `Your previous bid: ${mine.bid} credits — ${mine.opinion}`,
-                `Your previous reason: ${mine.reason}`,
-                "",
                 "Review the full list. Submit your bid again if you want to change it, or the same bid if you stand by your decision.",
             ].join("\n"),
-            true,
         );
     }
 
-    private async submitBid(task: Task, instruction: string, resume: boolean): Promise<AgentOpinion> {
-        const { reply } = await runPiAgentTurn(
-            [
-                `You are ${agentPersonalitiesDescriptions[this.personality]}`,
-                `You have ${this.credits} credits available.`,
+    private async submitBid(instruction: string, task?: Task): Promise<AgentOpinion> {
+        const promptParts: string[] = [];
+        if (!this.sessionStarted) {
+            promptParts.push(
+                agentPersonas[this.personality].prompt,
+                this.auctionBrief,
                 "",
-                `Task: ${task.title}`,
-                task.description,
-                "",
-                instruction,
-            ].join("\n"),
-            {
-                cwd: DEMO_PROJECT_CWD,
-                sessionId: this.sessionId,
-                resume,
-                customTools: [submitBidTool],
-                returnTool: SUBMIT_BID_TOOL_NAME,
-            },
-        );
+            );
+        }
+        promptParts.push(`You have ${this.credits} credits available.`);
+        if (task) {
+            promptParts.push("", `Task: ${task.title}`, task.description);
+        }
+        promptParts.push("", instruction);
+        const { reply } = await runPiAgentTurn(promptParts.join("\n"), {
+            cwd: DEMO_PROJECT_CWD,
+            sessionId: this.sessionId,
+            resume: this.sessionStarted,
+            persona: this.personality,
+            customTools: [submitBidTool],
+            returnTool: SUBMIT_BID_TOOL_NAME,
+        });
+        this.sessionStarted = true;
         const opinion = reply as AgentOpinion;
         if (!Number.isInteger(opinion.bid) || opinion.bid < 0 || opinion.bid > this.credits) {
             throw new Error(
@@ -127,7 +149,15 @@ export class Auction {
         this.agents = this.createAgents(agentPersonalities);
         console.log(`Agents: ${agentPersonalities.join(", ")}`);
         console.log("Decomposing goal into tasks…");
-        this.tasks = await this.planTask(this.input);
+        this.tasks = await this.planTask(this.input, agentPersonalities);
+        const brief = buildAuctionBrief(
+            this.input,
+            agentPersonalities,
+            this.tasks.map((t) => t.title),
+        );
+        for (const agent of this.agents) {
+            agent.setAuctionBrief(brief);
+        }
         console.log(`${this.tasks.length} task(s):`);
         for (const t of this.tasks) {
             console.log(`  • ${t.title}`);
@@ -142,7 +172,7 @@ export class Auction {
             await this.collectOpinions(
                 task,
                 "Verification",
-                (agent) => agent.verify(task, task.agentsOpinions),
+                (agent) => agent.verify(task.agentsOpinions),
                 true,
             );
         }
@@ -176,9 +206,12 @@ export class Auction {
     }
 
 
-    private async planTask(taskDescription: string): Promise<TaskWithAgentOpinions[]> {
-        const bidderRoles = Object.entries(agentPersonalitiesDescriptions)
-            .map(([role, desc]) => `- ${role}: ${desc}`)
+    private async planTask(
+        taskDescription: string,
+        participants: AgentPersonality[],
+    ): Promise<TaskWithAgentOpinions[]> {
+        const bidderRoles = participants
+            .map((role) => `- ${role}: ${agentPersonas[role].summary}`)
             .join("\n");
         const { reply } = await runPiAgentTurn(
             [
@@ -197,6 +230,7 @@ export class Auction {
             ].join("\n"),
             {
                 cwd: DEMO_PROJECT_CWD,
+                persona: "planner",
                 customTools: [decomposeTasksTool],
                 returnTool: DECOMPOSE_TASKS_TOOL_NAME,
             },
