@@ -70,14 +70,7 @@ class Agent {
     }
 
     public async bid(task: Task): Promise<AgentOpinion> {
-        return this.submitBid(
-            [
-                "Submit your bid, opinion, and reason.",
-                "In opinion: how you would do this task from your role — your plan and any calls you would make.",
-                "In reason: why your role should own this lot and why your approach is strong.",
-            ].join(" "),
-            task,
-        );
+        return this.submitBid("Submit your bid with a one-line opinion and one-line reason.", task);
     }
 
     public async verify(
@@ -85,7 +78,7 @@ class Agent {
     ): Promise<AgentOpinion> {
         const summary = Object.entries(agentsOpinions)
             .map(([personality, { bid, opinion, reason }]) =>
-                `- ${personality}: ${bid} credits — ${opinion}\n  Reason: ${reason}`)
+                `- ${personality}: ${bid} credits — ${opinion} | ${reason}`)
             .join("\n");
         return this.submitBid(
             [
