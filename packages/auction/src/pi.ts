@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import {
 	createAgentSession,
@@ -18,7 +19,9 @@ export const DEFAULT_PI_AGENT = {
 
 export const DEFAULT_PI_TOOLS = ["read", "grep", "find", "ls"] as const;
 
-export const DEMO_PROJECT_CWD = join(import.meta.dir, "../../../apps/demo-project");
+const packageSrcDir = dirname(fileURLToPath(import.meta.url));
+
+export const DEMO_PROJECT_CWD = join(packageSrcDir, "../../../apps/demo-project");
 
 export type PiAgentConfig = {
 	provider?: string;

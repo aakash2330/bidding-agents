@@ -1,3 +1,7 @@
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { AgentRole } from "../types";
 
 export type AgentPersona = {
@@ -24,12 +28,12 @@ function parsePersonaMarkdown(markdown: string): AgentPersona {
 	return { summary, prompt: body };
 }
 
-const personaDir = import.meta.dir;
+const personaDir = dirname(fileURLToPath(import.meta.url));
 
 export const agentPersonas: Record<AgentRole, AgentPersona> = await (async () => {
 	const entries = await Promise.all(
 		Object.entries(PERSONA_FILES).map(async ([personality, file]) => {
-			const markdown = await Bun.file(`${personaDir}/${file}`).text();
+			const markdown = await readFile(join(personaDir, file), "utf8");
 			return [personality, parsePersonaMarkdown(markdown)] as const;
 		}),
 	);
