@@ -6,5 +6,3 @@ const goal =
 
 const queue = createAuctionEventQueue();
 void runAuction(goal, queue);
-while (await queue.take()) {
-}
