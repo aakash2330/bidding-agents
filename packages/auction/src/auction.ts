@@ -4,11 +4,13 @@ import {
     decomposeTasksTool,
     type TaskDecomposition,
 } from "./tools/decompose-tasks.ts";
-import type {
-    AgentBid,
-    AgentRole,
-    AuctionEvent,
-    TaskWithAgentOpinions,
+import {
+    AuctionEventType,
+    AuctionRound,
+    type AgentBid,
+    type AgentRole,
+    type AuctionEvent,
+    type TaskWithAgentOpinions,
 } from "./types";
 import {
     SUBMIT_BID_TOOL_NAME,
@@ -132,45 +134,20 @@ export class Auction {
         this.input = input;
     }
 
-    public async initialize(agentPersonalities: AgentRole[]): Promise<void> {
-        this.agents = this.createAgents(agentPersonalities);
-        this.tasks = await this.planTask(this.input, agentPersonalities);
-        const brief = buildAuctionBrief(
-            this.input,
-            agentPersonalities,
-            this.tasks.map((t) => t.title),
-        );
-        for (const agent of this.agents) {
-            agent.setAuctionBrief(brief);
-        }
-    }
-
-
-    public async startAuction(): Promise<TaskWithAgentOpinions[]> {
-        for (const task of this.tasks) {
-            await this.collectOpinions(task, (agent) => agent.bid(task));
-            await this.collectOpinions(
-                task,
-                (agent) => agent.verify(task.agentsOpinions),
-                true,
-            );
-        }
-        return this.tasks;
-    }
-
-    public async *runStream(
+    public async run(
         agentPersonalities: AgentRole[],
-    ): AsyncGenerator<AuctionEvent, void> {
-        yield { type: "planning_started" };
+        onEvent: (event: AuctionEvent) => void,
+    ): Promise<TaskWithAgentOpinions[]> {
+        onEvent({ type: AuctionEventType.PlanningStarted });
         this.agents = this.createAgents(agentPersonalities);
         this.tasks = await this.planTask(this.input, agentPersonalities);
-        yield {
-            type: "tasks_planned",
+        onEvent({
+            type: AuctionEventType.TasksPlanned,
             tasks: this.tasks.map(({ title, description }) => ({
                 title,
                 description,
             })),
-        };
+        });
         const brief = buildAuctionBrief(
             this.input,
             agentPersonalities,
@@ -182,32 +159,33 @@ export class Auction {
 
         for (let index = 0; index < this.tasks.length; index++) {
             const task = this.tasks[index];
-            yield {
-                type: "lot_started",
+            onEvent({
+                type: AuctionEventType.LotStarted,
                 index,
                 title: task.title,
                 description: task.description,
-            };
+            });
             await this.collectOpinions(task, (agent) => agent.bid(task));
-            yield {
-                type: "round_complete",
+            onEvent({
+                type: AuctionEventType.RoundComplete,
                 index,
-                round: "initial",
+                round: AuctionRound.Initial,
                 opinions: { ...task.agentsOpinions },
-            };
+            });
             await this.collectOpinions(
                 task,
                 (agent) => agent.verify(task.agentsOpinions),
                 true,
             );
-            yield {
-                type: "round_complete",
+            onEvent({
+                type: AuctionEventType.RoundComplete,
                 index,
-                round: "verify",
+                round: AuctionRound.Verify,
                 opinions: { ...task.agentsOpinions },
-            };
+            });
         }
-        yield { type: "done", tasks: this.tasks };
+        onEvent({ type: AuctionEventType.Done, tasks: this.tasks });
+        return this.tasks;
     }
 
     private createAgents(agentPersonalities: AgentRole[]): Agent[] {

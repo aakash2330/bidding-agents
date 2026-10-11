@@ -2,6 +2,25 @@ export const AGENT_ROLES = ["designer", "engineer", "marketer"] as const;
 
 export type AgentRole = (typeof AGENT_ROLES)[number];
 
+export const AuctionEventType = {
+  PlanningStarted: "planning_started",
+  TasksPlanned: "tasks_planned",
+  LotStarted: "lot_started",
+  RoundComplete: "round_complete",
+  Done: "done",
+  Error: "error",
+} as const;
+
+export type AuctionEventType =
+  (typeof AuctionEventType)[keyof typeof AuctionEventType];
+
+export const AuctionRound = {
+  Initial: "initial",
+  Verify: "verify",
+} as const;
+
+export type AuctionRound = (typeof AuctionRound)[keyof typeof AuctionRound];
+
 export type AgentBid = {
   bid: number;
   opinion: string;
@@ -15,22 +34,22 @@ export type TaskWithAgentOpinions = {
 };
 
 export type AuctionEvent =
-  | { type: "planning_started" }
+  | { type: typeof AuctionEventType.PlanningStarted }
   | {
-      type: "tasks_planned";
+      type: typeof AuctionEventType.TasksPlanned;
       tasks: { title: string; description: string }[];
     }
   | {
-      type: "lot_started";
+      type: typeof AuctionEventType.LotStarted;
       index: number;
       title: string;
       description: string;
     }
   | {
-      type: "round_complete";
+      type: typeof AuctionEventType.RoundComplete;
       index: number;
-      round: "initial" | "verify";
+      round: AuctionRound;
       opinions: Record<AgentRole, AgentBid>;
     }
-  | { type: "done"; tasks: TaskWithAgentOpinions[] }
-  | { type: "error"; message: string };
+  | { type: typeof AuctionEventType.Done; tasks: TaskWithAgentOpinions[] }
+  | { type: typeof AuctionEventType.Error; message: string };

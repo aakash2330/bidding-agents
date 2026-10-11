@@ -1,4 +1,8 @@
-import { runAuctionStream } from "@bidding-agents/auction/stream";
+import {
+  createAuctionEventQueue,
+  isTerminalAuctionEvent,
+  runAuction,
+} from "@bidding-agents/auction/run";
 
 function sseLine(data: unknown): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
@@ -16,18 +20,27 @@ export async function POST(request: Request) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      const queue = createAuctionEventQueue();
+      const run = runAuction(problem, queue);
+
+      const onAbort = () => queue.close();
+      request.signal.addEventListener("abort", onAbort, { once: true });
+
       try {
-        for await (const event of runAuctionStream(problem)) {
-          controller.enqueue(sseLine(event));
+        while (true) {
+          const event = await queue.take();
+          if (event === null) break;
+          try {
+            controller.enqueue(sseLine(event));
+          } catch {
+            queue.close();
+            break;
+          }
+          if (isTerminalAuctionEvent(event)) break;
         }
-      } catch (error) {
-        controller.enqueue(
-          sseLine({
-            type: "error",
-            message: error instanceof Error ? error.message : String(error),
-          }),
-        );
       } finally {
+        request.signal.removeEventListener("abort", onAbort);
+        await run;
         controller.close();
       }
     },
