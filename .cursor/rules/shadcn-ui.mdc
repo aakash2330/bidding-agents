@@ -1,0 +1,24 @@
+---
+description: Prefer shadcn/ui components in the web app over hand-rolled UI
+globs: apps/web/**/*
+alwaysApply: false
+---
+
+# shadcn/ui (apps/web)
+
+This app uses shadcn (`components.json`, `src/components/ui/`). **Do not reinvent what shadcn already provides.**
+
+## Before building UI primitives
+
+1. Check `apps/web/src/components/ui/` for an existing component.
+2. If missing, check the [shadcn registry](https://ui.shadcn.com/docs/components) and add it from `apps/web`:
+   `bunx shadcn@latest add <component> --yes`
+3. Compose with `@/components/ui/*` (e.g. `Separator`, `Button`, `Dialog`) instead of one-off Tailwind patterns (`divide-x`, raw modal markup, etc.) when the shadcn component fits.
+
+## Examples
+
+- Column/section dividers → `Separator` (`orientation="vertical"`), not `divide-x`
+- Actions → `Button`, not unstyled `<button>` with duplicated classes
+- Overlays, menus, forms → use the matching shadcn component if one exists
+
+Match existing component style in `src/components/ui/` (Base UI primitives, `cn` from `cn`).

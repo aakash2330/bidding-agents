@@ -1,15 +1,15 @@
+import type { AgentRole } from "@bidding-agents/shared";
+
 export type AgentPersona = {
 	summary: string;
 	prompt: string;
 };
 
-const PERSONA_FILES = {
+const PERSONA_FILES: Record<AgentRole, string> = {
 	designer: "designer.md",
 	engineer: "engineer.md",
 	marketer: "marketer.md",
-} as const;
-
-export type AgentPersonaRole = keyof typeof PERSONA_FILES;
+};
 
 function parsePersonaMarkdown(markdown: string): AgentPersona {
 	const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
@@ -26,12 +26,12 @@ function parsePersonaMarkdown(markdown: string): AgentPersona {
 
 const personaDir = import.meta.dir;
 
-export const agentPersonas: Record<AgentPersonaRole, AgentPersona> = await (async () => {
+export const agentPersonas: Record<AgentRole, AgentPersona> = await (async () => {
 	const entries = await Promise.all(
 		Object.entries(PERSONA_FILES).map(async ([personality, file]) => {
 			const markdown = await Bun.file(`${personaDir}/${file}`).text();
 			return [personality, parsePersonaMarkdown(markdown)] as const;
 		}),
 	);
-	return Object.fromEntries(entries) as Record<AgentPersonaRole, AgentPersona>;
+	return Object.fromEntries(entries) as Record<AgentRole, AgentPersona>;
 })();

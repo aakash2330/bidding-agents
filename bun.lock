@@ -26,6 +26,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@base-ui/react": "^1.9.0",
+        "@bidding-agents/shared": "workspace:*",
         "class-variance-authority": "^0.7.1",
         "cn": "^0.4.0",
         "lucide-react": "^1.55.0",
@@ -49,6 +50,7 @@
     "packages/auction": {
       "name": "@bidding-agents/auction",
       "dependencies": {
+        "@bidding-agents/shared": "workspace:*",
         "@earendil-works/pi-ai": "^1.1.0",
         "@earendil-works/pi-coding-agent": "^1.1.0",
       },
@@ -58,6 +60,9 @@
       "peerDependencies": {
         "typescript": "^5",
       },
+    },
+    "packages/shared": {
+      "name": "@bidding-agents/shared",
     },
   },
   "trustedDependencies": [
@@ -172,6 +177,8 @@
     "@bidding-agents/auction": ["@bidding-agents/auction@workspace:packages/auction"],
 
     "@bidding-agents/demo-project": ["@bidding-agents/demo-project@workspace:apps/demo-project"],
+
+    "@bidding-agents/shared": ["@bidding-agents/shared@workspace:packages/shared"],
 
     "@bidding-agents/web": ["@bidding-agents/web@workspace:apps/web"],
 

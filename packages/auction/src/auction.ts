@@ -4,20 +4,14 @@ import {
     decomposeTasksTool,
     type TaskDecomposition,
 } from "./tools/decompose-tasks.ts";
+import type { AgentBid, AgentRole } from "@bidding-agents/shared";
 import {
     SUBMIT_BID_TOOL_NAME,
     submitBidTool,
-    type AgentBid,
 } from "./tools/submit-bid.ts";
 import { agentPersonas } from "./personas/load.ts";
 
 const INITIAL_CREDITS = 1000;
-
-export enum AgentPersonality {
-    DESIGNER = "designer",
-    ENGINEER = "engineer",
-    MARKETER = "marketer",
-}
 
 type Task = {
     title: string;
@@ -25,14 +19,14 @@ type Task = {
 }
 
 export type TaskWithAgentOpinions = Task & {
-    agentsOpinions: Record<AgentPersonality, AgentOpinion>;
+    agentsOpinions: Record<AgentRole, AgentOpinion>;
 }
 
 type AgentOpinion = AgentBid;
 
 function buildAuctionBrief(
     goal: string,
-    participants: AgentPersonality[],
+    participants: AgentRole[],
     lotTitles: string[],
 ): string {
     const roster = participants
@@ -60,7 +54,7 @@ class Agent {
 
     constructor(
         private readonly sessionId: string,
-        public readonly personality: AgentPersonality,
+        public readonly personality: AgentRole,
         private credits: number,
     ) {
     }
@@ -74,7 +68,7 @@ class Agent {
     }
 
     public async verify(
-        agentsOpinions: Record<AgentPersonality, AgentOpinion>,
+        agentsOpinions: Record<AgentRole, AgentOpinion>,
     ): Promise<AgentOpinion> {
         const summary = Object.entries(agentsOpinions)
             .map(([personality, { bid, opinion, reason }]) =>
@@ -108,7 +102,6 @@ class Agent {
             cwd: DEMO_PROJECT_CWD,
             sessionId: this.sessionId,
             resume: this.sessionStarted,
-            persona: this.personality,
             customTools: [submitBidTool],
             returnTool: SUBMIT_BID_TOOL_NAME,
         });
@@ -138,10 +131,8 @@ export class Auction {
         this.input = input;
     }
 
-    public async initialize(agentPersonalities: AgentPersonality[]): Promise<void> {
+    public async initialize(agentPersonalities: AgentRole[]): Promise<void> {
         this.agents = this.createAgents(agentPersonalities);
-        console.log(`Agents: ${agentPersonalities.join(", ")}`);
-        console.log("Decomposing goal into tasks…");
         this.tasks = await this.planTask(this.input, agentPersonalities);
         const brief = buildAuctionBrief(
             this.input,
@@ -151,20 +142,14 @@ export class Auction {
         for (const agent of this.agents) {
             agent.setAuctionBrief(brief);
         }
-        console.log(`${this.tasks.length} task(s):`);
-        for (const t of this.tasks) {
-            console.log(`  • ${t.title}`);
-        }
     }
 
 
     public async startAuction(): Promise<TaskWithAgentOpinions[]> {
-        for (const [i, task] of this.tasks.entries()) {
-            console.log(`\n[${i + 1}/${this.tasks.length}] ${task.title}`);
-            await this.collectOpinions(task, "Initial bids", (agent) => agent.bid(task));
+        for (const task of this.tasks) {
+            await this.collectOpinions(task, (agent) => agent.bid(task));
             await this.collectOpinions(
                 task,
-                "Verification",
                 (agent) => agent.verify(task.agentsOpinions),
                 true,
             );
@@ -172,25 +157,22 @@ export class Auction {
         return this.tasks;
     }
 
-    private createAgents(agentPersonalities: AgentPersonality[]): Agent[] {
+    private createAgents(agentPersonalities: AgentRole[]): Agent[] {
         return agentPersonalities.map(personality => new Agent(crypto.randomUUID(), personality, INITIAL_CREDITS));
     }
 
     private async collectOpinions(
         task: TaskWithAgentOpinions,
-        phase: string,
         ask: (agent: Agent) => Promise<AgentOpinion>,
         deductCredits = false,
     ): Promise<void> {
-        console.log(`  ${phase}:`);
         const entries = await Promise.all(
             this.agents.map(async (agent) => {
                 const opinion = await ask(agent);
-                console.log(`    ${agent.personality}: ${opinion.bid} credits — ${opinion.opinion}`);
                 return [agent.personality, opinion] as const;
             }),
         );
-        task.agentsOpinions = Object.fromEntries(entries) as Record<AgentPersonality, AgentOpinion>;
+        task.agentsOpinions = Object.fromEntries(entries) as Record<AgentRole, AgentOpinion>;
         if (deductCredits) {
             for (const agent of this.agents) {
                 agent.deductCredits(task.agentsOpinions[agent.personality].bid);
@@ -201,7 +183,7 @@ export class Auction {
 
     private async planTask(
         taskDescription: string,
-        participants: AgentPersonality[],
+        participants: AgentRole[],
     ): Promise<TaskWithAgentOpinions[]> {
         const bidderRoles = participants
             .map((role) => `- ${role}: ${agentPersonas[role].summary}`)
@@ -223,7 +205,6 @@ export class Auction {
             ].join("\n"),
             {
                 cwd: DEMO_PROJECT_CWD,
-                persona: "planner",
                 customTools: [decomposeTasksTool],
                 returnTool: DECOMPOSE_TASKS_TOOL_NAME,
             },
@@ -235,7 +216,7 @@ export class Auction {
             description: task.description,
             agentsOpinions: Object.fromEntries(
                 this.agents.map(agent => [agent.personality, { bid: 0, opinion: "", reason: "" }]),
-            ) as Record<AgentPersonality, AgentBid>,
+            ) as Record<AgentRole, AgentBid>,
         }));
     }
 }

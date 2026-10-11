@@ -6,6 +6,7 @@
     "auction": "bun --env-file=../../.env src/cli.ts"
   },
   "dependencies": {
+    "@bidding-agents/shared": "workspace:*",
     "@earendil-works/pi-ai": "^1.1.0",
     "@earendil-works/pi-coding-agent": "^1.1.0"
   },

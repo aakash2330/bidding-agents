@@ -1,13 +1,10 @@
+import type { AgentBid } from "@bidding-agents/shared";
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool } from "@earendil-works/pi-coding-agent";
 
 export const SUBMIT_BID_TOOL_NAME = "submit_bid";
 
-export type AgentBid = {
-	bid: number;
-	opinion: string;
-	reason: string;
-};
+export type { AgentBid };
 
 const LINE_MAX = 240;
 
