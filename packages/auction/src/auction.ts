@@ -4,7 +4,12 @@ import {
     decomposeTasksTool,
     type TaskDecomposition,
 } from "./tools/decompose-tasks.ts";
-import type { AgentBid, AgentRole } from "./types";
+import type {
+    AgentBid,
+    AgentRole,
+    AuctionEvent,
+    TaskWithAgentOpinions,
+} from "./types";
 import {
     SUBMIT_BID_TOOL_NAME,
     submitBidTool,
@@ -16,10 +21,6 @@ const INITIAL_CREDITS = 1000;
 type Task = {
     title: string;
     description: string;
-}
-
-export type TaskWithAgentOpinions = Task & {
-    agentsOpinions: Record<AgentRole, AgentOpinion>;
 }
 
 type AgentOpinion = AgentBid;
@@ -155,6 +156,58 @@ export class Auction {
             );
         }
         return this.tasks;
+    }
+
+    public async *runStream(
+        agentPersonalities: AgentRole[],
+    ): AsyncGenerator<AuctionEvent, void> {
+        yield { type: "planning_started" };
+        this.agents = this.createAgents(agentPersonalities);
+        this.tasks = await this.planTask(this.input, agentPersonalities);
+        yield {
+            type: "tasks_planned",
+            tasks: this.tasks.map(({ title, description }) => ({
+                title,
+                description,
+            })),
+        };
+        const brief = buildAuctionBrief(
+            this.input,
+            agentPersonalities,
+            this.tasks.map((t) => t.title),
+        );
+        for (const agent of this.agents) {
+            agent.setAuctionBrief(brief);
+        }
+
+        for (let index = 0; index < this.tasks.length; index++) {
+            const task = this.tasks[index];
+            yield {
+                type: "lot_started",
+                index,
+                title: task.title,
+                description: task.description,
+            };
+            await this.collectOpinions(task, (agent) => agent.bid(task));
+            yield {
+                type: "round_complete",
+                index,
+                round: "initial",
+                opinions: { ...task.agentsOpinions },
+            };
+            await this.collectOpinions(
+                task,
+                (agent) => agent.verify(task.agentsOpinions),
+                true,
+            );
+            yield {
+                type: "round_complete",
+                index,
+                round: "verify",
+                opinions: { ...task.agentsOpinions },
+            };
+        }
+        yield { type: "done", tasks: this.tasks };
     }
 
     private createAgents(agentPersonalities: AgentRole[]): Agent[] {

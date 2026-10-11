@@ -6,7 +6,8 @@
     "auction": "bun --env-file=../../.env src/cli.ts"
   },
   "exports": {
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./stream": "./src/run-auction-stream.ts"
   },
   "dependencies": {
     "@earendil-works/pi-ai": "^1.1.0",

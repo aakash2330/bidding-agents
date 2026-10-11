@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@bidding-agents/auction"],
+  serverExternalPackages: [
+    "@earendil-works/pi-coding-agent",
+    "@earendil-works/pi-ai",
+    "quickjs-wasi",
+  ],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

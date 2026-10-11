@@ -1,13 +1,25 @@
-import type { AgentRole } from "@bidding-agents/auction/types";
+import type { AgentBid, AgentRole } from "@bidding-agents/auction/types";
 
-//TODO: this just contains whatever is needed to render the bidding and the tool calls and the decision taken by the bidder once we submit the problem statement for agents to work on
-export default function BidderSection({ role }: { role: AgentRole }) {
+export default function BidderSection({
+  role,
+  status,
+  bid,
+}: {
+  role: AgentRole;
+  status: string;
+  bid?: AgentBid;
+}) {
   return (
-    <div>
-      <div className="text-sm font-medium capitalize">{role}</div>
-      <div>Bidding</div>
-      <div>Tool calls</div>
-      <div>Decision</div>
+    <div className="flex flex-col gap-2 text-sm">
+      <div className="font-medium capitalize">{role}</div>
+      <p className="text-muted-foreground">{status}</p>
+      {bid ? (
+        <div className="rounded-md border p-2">
+          <div className="font-medium">{bid.bid} credits</div>
+          <div>{bid.opinion}</div>
+          <div className="text-muted-foreground">{bid.reason}</div>
+        </div>
+      ) : null}
     </div>
   );
 }

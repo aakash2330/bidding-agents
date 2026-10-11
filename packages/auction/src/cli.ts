@@ -5,6 +5,5 @@ const goal =
     process.argv.slice(2).join(" ").trim() ||
     "create a landing page for a barber shop";
 
-const auction = new Auction(goal);
-await auction.initialize([...AGENT_ROLES]);
-await auction.startAuction();
+for await (const _event of new Auction(goal).runStream([...AGENT_ROLES])) {
+}
