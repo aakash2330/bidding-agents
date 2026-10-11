@@ -1,4 +1,4 @@
-import type { AgentRole } from "@bidding-agents/shared";
+import type { AgentRole } from "../types";
 
 export type AgentPersona = {
 	summary: string;

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@bidding-agents/shared"],
+  transpilePackages: ["@bidding-agents/auction"],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

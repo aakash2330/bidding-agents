@@ -1,4 +1,4 @@
-import { AGENT_ROLES } from "@bidding-agents/shared";
+import { AGENT_ROLES } from "./types";
 import { Auction } from "./auction.ts";
 
 const goal =

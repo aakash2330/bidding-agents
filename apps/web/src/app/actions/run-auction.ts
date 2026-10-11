@@ -5,7 +5,5 @@ export async function runAuctionPipeline(formData: FormData) {
   if (!problem) {
     throw new Error("Problem is required");
   }
-
-  // Placeholder: invoke @bidding-agents/auction pipeline (see packages/auction).
   console.log("[runAuctionPipeline]", problem);
 }

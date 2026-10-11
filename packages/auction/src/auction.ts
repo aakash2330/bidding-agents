@@ -4,7 +4,7 @@ import {
     decomposeTasksTool,
     type TaskDecomposition,
 } from "./tools/decompose-tasks.ts";
-import type { AgentBid, AgentRole } from "@bidding-agents/shared";
+import type { AgentBid, AgentRole } from "./types";
 import {
     SUBMIT_BID_TOOL_NAME,
     submitBidTool,

@@ -1,4 +1,4 @@
-import type { AgentBid } from "@bidding-agents/shared";
+import type { AgentBid } from "../types";
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool } from "@earendil-works/pi-coding-agent";
 

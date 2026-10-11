@@ -1,4 +1,4 @@
-import { AGENT_ROLES } from "@bidding-agents/shared";
+import { AGENT_ROLES } from "@bidding-agents/auction/types";
 
 import { runAuctionPipeline } from "@/app/actions/run-auction";
 import BidderSection from "@/components/bidder/BidderSection";
