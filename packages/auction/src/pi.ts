@@ -4,7 +4,6 @@ import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import {
 	createAgentSession,
 	ModelRuntime,
-	resolveCliModel,
 	SessionManager,
 	type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
@@ -13,8 +12,8 @@ export type { DecomposedTask, TaskDecomposition } from "./tools/decompose-tasks.
 export type { AgentBid } from "./tools/submit-bid.ts";
 
 export const DEFAULT_PI_AGENT = {
-	provider: "deepseek",
-	model: "deepseek-v4-pro",
+	provider: "cursor",
+	model: "composer-2.5",
 } as const;
 
 export const DEFAULT_PI_TOOLS = ["read", "grep", "find", "ls"] as const;
@@ -111,24 +110,26 @@ async function createPiSession(options: RunPiAgentOptions, sessionManager: Sessi
 		await modelRuntime.setRuntimeApiKey(provider, options.apiKey);
 	}
 
-	const resolved = resolveCliModel({
-		cliModel: `${provider}/${modelId}`,
-		cliThinking: options.thinkingLevel,
-		modelRuntime,
-	});
-	if (!resolved.model) {
-		throw new Error(resolved.error ?? `Unknown model ${provider}/${modelId}`);
-	}
-
-	return createAgentSession({
-		model: resolved.model,
-		thinkingLevel: resolved.thinkingLevel ?? options.thinkingLevel,
+	const sessionResult = await createAgentSession({
 		modelRuntime,
 		sessionManager,
 		cwd,
+		thinkingLevel: options.thinkingLevel,
 		tools: sessionTools(options.customTools),
 		...(options.customTools ? { customTools: options.customTools } : {}),
 	});
+
+	let model = modelRuntime.getModel(provider, modelId);
+	if (!model && provider === "cursor" && modelId === "composer-2.5") {
+		const composer2 = modelRuntime.getModel(provider, "composer-2");
+		if (composer2) model = { ...composer2, id: "composer-2.5" };
+	}
+	if (!model) {
+		throw new Error(`Unknown model ${provider}/${modelId}`);
+	}
+	await sessionResult.session.setModel(model, { thinkingLevel: options.thinkingLevel });
+
+	return sessionResult;
 }
 
 export async function runPiAgentTurn(
