@@ -1,16 +1,20 @@
 import {
   AGENT_ROLES,
   AuctionEventType,
+  AuctionRound,
   type AgentBid,
   type AgentRole,
   type AuctionEvent,
-  type AuctionRound,
   type TaskWithAgentOpinions,
 } from "@bidding-agents/auction/types";
 import { create } from "zustand";
 
+export type LotActivity = "bidding" | "verify" | null;
+
 export type AuctionRunState = {
-  lastEvent: AuctionEvent | null;
+  lastEventType: AuctionEventType | null;
+  lotActivity: LotActivity;
+  errorMessage: string | null;
   tasks: TaskWithAgentOpinions[];
   currentTaskIndex: number | null;
   currentRound: AuctionRound | null;
@@ -27,7 +31,9 @@ function emptyAgentOpinions(): Record<AgentRole, AgentBid> {
 
 export function initialAuctionRunState(): AuctionRunState {
   return {
-    lastEvent: null,
+    lastEventType: null,
+    lotActivity: null,
+    errorMessage: null,
     tasks: [],
     currentTaskIndex: null,
     currentRound: null,
@@ -40,24 +46,29 @@ export function applyAuctionEvent(
 ): AuctionRunState {
   switch (event.type) {
     case AuctionEventType.PlanningStarted:
-      return { ...initialAuctionRunState(), lastEvent: event };
+      return {
+        ...initialAuctionRunState(),
+        lastEventType: event.type,
+      };
 
     case AuctionEventType.TasksPlanned:
       return {
         ...state,
-        lastEvent: event,
+        lastEventType: event.type,
         tasks: event.tasks.map((task) => ({
           ...task,
           agentsOpinions: emptyAgentOpinions(),
         })),
         currentTaskIndex: null,
         currentRound: null,
+        lotActivity: null,
       };
 
     case AuctionEventType.LotStarted:
       return {
         ...state,
-        lastEvent: event,
+        lastEventType: event.type,
+        lotActivity: "bidding",
         currentTaskIndex: event.index,
         currentRound: null,
         tasks: state.tasks.map((task, index) =>
@@ -74,7 +85,9 @@ export function applyAuctionEvent(
     case AuctionEventType.RoundComplete:
       return {
         ...state,
-        lastEvent: event,
+        lastEventType: event.type,
+        lotActivity:
+          event.round === AuctionRound.Initial ? "verify" : null,
         currentRound: event.round,
         tasks: state.tasks.map((task, index) =>
           index === event.index
@@ -86,7 +99,8 @@ export function applyAuctionEvent(
     case AuctionEventType.Done:
       return {
         ...state,
-        lastEvent: event,
+        lastEventType: event.type,
+        lotActivity: null,
         tasks: event.tasks,
         currentTaskIndex: null,
         currentRound: null,
@@ -95,7 +109,8 @@ export function applyAuctionEvent(
     case AuctionEventType.Error:
       return {
         ...state,
-        lastEvent: event,
+        lastEventType: event.type,
+        errorMessage: event.message,
       };
 
     default:
