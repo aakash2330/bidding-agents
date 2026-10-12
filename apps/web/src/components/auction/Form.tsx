@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ export function AuctionForm() {
   const applyEvent = useAuctionStore((s) => s.applyEvent);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const closeStreamRef = useRef<(() => void) | null>(null);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,12 +53,19 @@ export function AuctionForm() {
         setError("Request failed");
         return;
       }
-      await openAuctionEventSource(id, applyEvent);
+      const stream = openAuctionEventSource(id, applyEvent);
+      closeStreamRef.current = stream.close;
+      await stream.done;
     } catch {
       setError("Auction stream failed");
     } finally {
+      closeStreamRef.current = null;
       setPending(false);
     }
+  }
+
+  function onCancel() {
+    closeStreamRef.current?.();
   }
 
   return (
@@ -79,9 +87,13 @@ export function AuctionForm() {
             </FieldContent>
           </Field>
         </FieldGroup>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Running auction…" : "Start auction"}
-        </Button>
+        {pending ? (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        ) : (
+          <Button type="submit">Start auction</Button>
+        )}
       </FieldSet>
     </form>
   );
