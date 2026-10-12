@@ -2,6 +2,7 @@ import { AGENT_ROLES } from "@bidding-agents/auction/types";
 
 import BidderSection from "@/components/bidder/BidderSection";
 import { BidderSectionLayout } from "@/components/bidder/BidderSectionLayout";
+import { AuctionForm } from "@/components/auction/Form";
 
 export default function Home() {
   return (
@@ -10,6 +11,7 @@ export default function Home() {
         <h1 className="text-2xl font-semibold tracking-tight">
           Bidding agents
         </h1>
+        <AuctionForm />
         <BidderSectionLayout>
           {AGENT_ROLES.map((role) => (
             <BidderSection key={role} role={role} />
