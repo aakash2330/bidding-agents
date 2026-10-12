@@ -53,3 +53,10 @@ export type AuctionEvent =
     }
   | { type: typeof AuctionEventType.Done; tasks: TaskWithAgentOpinions[] }
   | { type: typeof AuctionEventType.Error; message: string };
+
+export function isTerminalAuctionEvent(event: AuctionEvent): boolean {
+  return (
+    event.type === AuctionEventType.Done ||
+    event.type === AuctionEventType.Error
+  );
+}

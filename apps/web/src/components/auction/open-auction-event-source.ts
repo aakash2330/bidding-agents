@@ -1,5 +1,7 @@
-import type { AuctionEvent } from "@bidding-agents/auction/types";
-import { isTerminalAuctionEvent } from "@bidding-agents/auction/run";
+import {
+  type AuctionEvent,
+  isTerminalAuctionEvent,
+} from "@bidding-agents/auction/types";
 
 export function openAuctionEventSource(
   streamId: string,

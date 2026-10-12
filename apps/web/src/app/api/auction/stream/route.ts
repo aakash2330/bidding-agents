@@ -1,7 +1,7 @@
 import {
-  isTerminalAuctionEvent,
   type AuctionEvent,
-} from "@bidding-agents/auction/run";
+  isTerminalAuctionEvent,
+} from "@bidding-agents/auction/types";
 
 import {
   endAuctionRun,

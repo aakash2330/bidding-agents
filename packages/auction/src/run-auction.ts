@@ -8,6 +8,7 @@ import {
 } from "./types.ts";
 
 export type { AuctionEvent, TaskWithAgentOpinions } from "./types.ts";
+export { isTerminalAuctionEvent } from "./types.ts";
 export type { AsyncQueue } from "./async-queue.ts";
 export { createAsyncQueue } from "./async-queue.ts";
 
@@ -34,9 +35,3 @@ export async function runAuction(
 	}
 }
 
-export function isTerminalAuctionEvent(event: AuctionEvent): boolean {
-	return (
-		event.type === AuctionEventType.Done ||
-		event.type === AuctionEventType.Error
-	);
-}
