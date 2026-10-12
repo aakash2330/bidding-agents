@@ -1,6 +1,34 @@
+import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
+import tls from "node:tls";
 import { fileURLToPath } from "node:url";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
+
+// Bun's HTTP/2 client verifies the CNAME (agentn.api5lat.cursor.sh), which is not on the cert.
+// Connect to the A record and keep the original name as SNI. ponytail: drop when Bun fixes this.
+const cursorAddresses = new Map<string, { ips: string[]; at: number }>();
+
+function cursorAddressesFor(host: string): string[] | undefined {
+	const hit = cursorAddresses.get(host);
+	if (hit && Date.now() - hit.at < 30_000) return hit.ips;
+	const res = spawnSync("dig", ["+short", host, "A"], { encoding: "utf8", timeout: 2000 });
+	const ips = res.stdout?.split(/\s+/).filter((line) => /^\d{1,3}(\.\d{1,3}){3}$/.test(line)) ?? [];
+	if (!ips.length) return;
+	cursorAddresses.set(host, { ips, at: Date.now() });
+	return ips;
+}
+
+if (process.versions.bun) {
+	const connect = tls.connect;
+	tls.connect = ((options: tls.ConnectionOptions, ...args: unknown[]) => {
+		if (typeof options?.host === "string" && options.host.endsWith(".cursor.sh")) {
+			const ips = cursorAddressesFor(options.host);
+			const ip = ips?.[0];
+			if (ip) options = { ...options, host: ip, servername: options.servername || options.host };
+		}
+		return connect(options, ...(args as []));
+	}) as typeof tls.connect;
+}
 import {
 	createAgentSession,
 	ModelRuntime,
