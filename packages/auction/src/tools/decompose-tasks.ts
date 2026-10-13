@@ -1,5 +1,4 @@
-import { Type } from "@earendil-works/pi-ai";
-import { defineTool } from "@earendil-works/pi-coding-agent";
+import { defineTool, Type } from "@bidding-agents/pi";
 
 export const DECOMPOSE_TASKS_TOOL_NAME = "decompose_tasks";
 

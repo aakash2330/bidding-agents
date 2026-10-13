@@ -1,8 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { dirname, join } from "node:path";
 import tls from "node:tls";
-import { fileURLToPath } from "node:url";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
+
+export { Type } from "@earendil-works/pi-ai";
+export type { ThinkingLevel } from "@earendil-works/pi-agent-core";
+export { defineTool, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 
 // Bun's HTTP/2 client verifies the CNAME (agentn.api5lat.cursor.sh), which is not on the cert.
 // Connect to the A record and keep the original name as SNI. ponytail: drop when Bun fixes this.
@@ -36,19 +38,12 @@ import {
 	type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 
-export type { DecomposedTask, TaskDecomposition } from "./tools/decompose-tasks.ts";
-export type { AgentBid } from "./tools/submit-bid.ts";
-
 export const DEFAULT_PI_AGENT = {
 	provider: "cursor",
 	model: "composer-2.5",
 } as const;
 
 export const DEFAULT_PI_TOOLS = ["read", "grep", "find", "ls"] as const;
-
-const packageSrcDir = dirname(fileURLToPath(import.meta.url));
-
-export const DEMO_PROJECT_CWD = join(packageSrcDir, "../../../apps/demo-project");
 
 export type PiAgentConfig = {
 	provider?: string;
@@ -155,7 +150,7 @@ async function createPiSession(options: RunPiAgentOptions, sessionManager: Sessi
 	if (!model) {
 		throw new Error(`Unknown model ${provider}/${modelId}`);
 	}
-	await sessionResult.session.setModel(model, { thinkingLevel: options.thinkingLevel });
+	await sessionResult.session.setModel(model);
 
 	return sessionResult;
 }

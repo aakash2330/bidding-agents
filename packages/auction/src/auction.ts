@@ -1,4 +1,6 @@
-import { DEMO_PROJECT_CWD, runPiAgentTurn } from "./pi.ts";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { runPiAgentTurn } from "@bidding-agents/pi";
 import {
     DECOMPOSE_TASKS_TOOL_NAME,
     decomposeTasksTool,
@@ -19,6 +21,8 @@ import {
 import { agentPersonas } from "./personas/load.ts";
 
 const INITIAL_CREDITS = 1000;
+
+const DEMO_PROJECT_CWD = join(dirname(fileURLToPath(import.meta.url)), "../../../apps/demo-project");
 
 type Task = {
     title: string;

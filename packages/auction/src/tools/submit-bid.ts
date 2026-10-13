@@ -1,6 +1,5 @@
 import type { AgentBid } from "../types";
-import { Type } from "@earendil-works/pi-ai";
-import { defineTool } from "@earendil-works/pi-coding-agent";
+import { defineTool, Type } from "@bidding-agents/pi";
 
 export const SUBMIT_BID_TOOL_NAME = "submit_bid";
 

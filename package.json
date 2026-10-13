@@ -1,15 +1,15 @@
 {
   "name": "bidding-agents",
-  "private": true,
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  },
   "packageManager": "bun@1.3.13",
-  "workspaces": ["packages/*", "apps/*"],
+  "private": true,
   "scripts": {
     "auction": "turbo run auction --filter=@bidding-agents/auction",
     "agent": "turbo run auction --filter=@bidding-agents/auction",
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=@bidding-agents/web"
   },
-  "devDependencies": {
-    "turbo": "^2.5.4"
-  }
+  "workspaces": ["packages/*", "apps/*"]
 }

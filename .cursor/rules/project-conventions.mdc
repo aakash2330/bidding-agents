@@ -13,7 +13,7 @@ For every task in this repo, read and follow the **ponytail** skill before writi
 
 Do not add or expand test files unless the user explicitly asks for tests.
 
-## Pi agent sessions (`pi.ts`)
+## Pi agent sessions (`packages/pi/src/pi.ts`)
 
 - Use `runPiAgentTurn` for all Pi agent calls (one-shot or multi-turn).
 - Track **`sessionId` only** — do not return or require `sessionFile` in the public API.
