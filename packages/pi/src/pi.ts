@@ -1,36 +1,9 @@
-import { spawnSync } from "node:child_process";
-import tls from "node:tls";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 
 export { Type } from "@earendil-works/pi-ai";
 export type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 export { defineTool, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 
-// Bun's HTTP/2 client verifies the CNAME (agentn.api5lat.cursor.sh), which is not on the cert.
-// Connect to the A record and keep the original name as SNI. ponytail: drop when Bun fixes this.
-const cursorAddresses = new Map<string, { ips: string[]; at: number }>();
-
-function cursorAddressesFor(host: string): string[] | undefined {
-	const hit = cursorAddresses.get(host);
-	if (hit && Date.now() - hit.at < 30_000) return hit.ips;
-	const res = spawnSync("dig", ["+short", host, "A"], { encoding: "utf8", timeout: 2000 });
-	const ips = res.stdout?.split(/\s+/).filter((line) => /^\d{1,3}(\.\d{1,3}){3}$/.test(line)) ?? [];
-	if (!ips.length) return;
-	cursorAddresses.set(host, { ips, at: Date.now() });
-	return ips;
-}
-
-if (process.versions.bun) {
-	const connect = tls.connect;
-	tls.connect = ((options: tls.ConnectionOptions, ...args: unknown[]) => {
-		if (typeof options?.host === "string" && options.host.endsWith(".cursor.sh")) {
-			const ips = cursorAddressesFor(options.host);
-			const ip = ips?.[0];
-			if (ip) options = { ...options, host: ip, servername: options.servername || options.host };
-		}
-		return connect(options, ...(args as []));
-	}) as typeof tls.connect;
-}
 import {
 	createAgentSession,
 	ModelRuntime,
@@ -39,8 +12,9 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 export const DEFAULT_PI_AGENT = {
-	provider: "cursor",
-	model: "composer-2.5",
+	provider: "opencode-go",
+	model: "deepseek-v4.1-flash",
+	thinkingLevel: "high",
 } as const;
 
 export const DEFAULT_PI_TOOLS = ["read", "grep", "find", "ls"] as const;
@@ -137,16 +111,12 @@ async function createPiSession(options: RunPiAgentOptions, sessionManager: Sessi
 		modelRuntime,
 		sessionManager,
 		cwd,
-		thinkingLevel: options.thinkingLevel,
+		thinkingLevel: options.thinkingLevel ?? DEFAULT_PI_AGENT.thinkingLevel,
 		tools: sessionTools(options.customTools),
 		...(options.customTools ? { customTools: options.customTools } : {}),
 	});
 
-	let model = modelRuntime.getModel(provider, modelId);
-	if (!model && provider === "cursor" && modelId === "composer-2.5") {
-		const composer2 = modelRuntime.getModel(provider, "composer-2");
-		if (composer2) model = { ...composer2, id: "composer-2.5" };
-	}
+	const model = modelRuntime.getModel(provider, modelId);
 	if (!model) {
 		throw new Error(`Unknown model ${provider}/${modelId}`);
 	}

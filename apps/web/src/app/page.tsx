@@ -1,13 +1,7 @@
+import { AuctionDetailsView } from "@/components/auction/AuctionDetailsView";
 import { AuctionForm } from "@/components/auction/Form";
-import { AuctionRunView } from "@/components/auction/AuctionRunView";
 import { CompareSection } from "@/components/compare/CompareSection";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { DirectPlanView } from "@/components/direct/DirectPlanView";
 
 export default function Home() {
   return (
@@ -18,39 +12,8 @@ export default function Home() {
         </h1>
         <AuctionForm />
         <CompareSection
-          directDetails={
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Process</CardTitle>
-                <CardDescription>
-                  Single-agent build transcript
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Transcript will go here.
-                </p>
-              </CardContent>
-            </Card>
-          }
-          auctionDetails={
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Resolved plan</CardTitle>
-                  <CardDescription>
-                    Winning bid per lot after the auction
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Lot winners will go here.
-                  </p>
-                </CardContent>
-              </Card>
-              <AuctionRunView />
-            </>
-          }
+          directDetails={<DirectPlanView />}
+          auctionDetails={<AuctionDetailsView />}
         />
       </main>
     </div>

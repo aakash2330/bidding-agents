@@ -13,12 +13,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { openAuctionEventSource } from "./open-auction-event-source";
 import { useAuctionStore } from "@/stores/auction-store";
+import { useDirectStore } from "@/stores/direct-store";
 
 export function AuctionForm() {
   const problem = useAuctionStore((s) => s.problem);
   const setProblem = useAuctionStore((s) => s.setProblem);
   const resetRun = useAuctionStore((s) => s.resetRun);
   const applyEvent = useAuctionStore((s) => s.applyEvent);
+  const startDirectPlan = useDirectStore((s) => s.startDirectPlan);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const closeStreamRef = useRef<(() => void) | null>(null);
@@ -34,6 +36,7 @@ export function AuctionForm() {
     setError(null);
     setProblem(value);
     resetRun();
+    void startDirectPlan(value);
     setPending(true);
     try {
       const response = await fetch("/api/auction/stream", {
