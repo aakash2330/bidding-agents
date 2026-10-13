@@ -1,0 +1,17 @@
+{
+  "name": "@bidding-agents/e2b",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "bun demo.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "e2b": "^2.55.0"
+  }
+}
