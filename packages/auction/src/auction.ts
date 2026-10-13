@@ -19,6 +19,7 @@ import {
     submitBidTool,
 } from "./tools/submit-bid.ts";
 import { agentPersonas } from "./personas/load.ts";
+import { buildFinalPlan } from "./final-plan.ts";
 
 const INITIAL_CREDITS = 1000;
 
@@ -188,7 +189,11 @@ export class Auction {
                 opinions: { ...task.agentsOpinions },
             });
         }
-        onEvent({ type: AuctionEventType.Done, tasks: this.tasks });
+        onEvent({
+            type: AuctionEventType.Done,
+            tasks: this.tasks,
+            plan: buildFinalPlan(this.tasks),
+        });
         return this.tasks;
     }
 

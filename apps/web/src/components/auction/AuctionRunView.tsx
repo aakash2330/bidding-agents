@@ -1,28 +1,21 @@
 "use client";
 
-import { AGENT_ROLES } from "@bidding-agents/auction/types";
-
-import {
-  AuctionRunStatus,
-  useViewTaskIndex,
-} from "@/components/auction/AuctionRunStatus";
-import BidderSection from "@/components/bidder/BidderSection";
-import { BidderSectionLayout } from "@/components/bidder/BidderSectionLayout";
+import { AuctionRunStatus } from "@/components/auction/AuctionRunStatus";
+import { PlanCard } from "@/components/plan/PlanCard";
+import { useAuctionStore } from "@/stores/auction-store";
 
 export function AuctionRunView() {
-  const [viewTaskIndex, setViewTaskIndex] = useViewTaskIndex();
+  const plan = useAuctionStore((s) => s.plan);
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <AuctionRunStatus
-        viewTaskIndex={viewTaskIndex}
-        onViewTaskIndexChange={setViewTaskIndex}
+      <AuctionRunStatus />
+      <PlanCard
+        title="Plan"
+        description="Final plan from the auction"
+        placeholder="The plan will go here."
+        plan={plan}
       />
-      <BidderSectionLayout>
-        {AGENT_ROLES.map((role) => (
-          <BidderSection key={role} role={role} taskIndex={viewTaskIndex} />
-        ))}
-      </BidderSectionLayout>
     </div>
   );
 }

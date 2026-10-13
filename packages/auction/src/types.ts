@@ -51,7 +51,7 @@ export type AuctionEvent =
       round: AuctionRound;
       opinions: Record<AgentRole, AgentBid>;
     }
-  | { type: typeof AuctionEventType.Done; tasks: TaskWithAgentOpinions[] }
+  | { type: typeof AuctionEventType.Done; tasks: TaskWithAgentOpinions[]; plan: string }
   | { type: typeof AuctionEventType.Error; message: string };
 
 export function isTerminalAuctionEvent(event: AuctionEvent): boolean {

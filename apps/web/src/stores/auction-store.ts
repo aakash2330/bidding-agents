@@ -18,6 +18,7 @@ export type AuctionRunState = {
   tasks: TaskWithAgentOpinions[];
   currentTaskIndex: number | null;
   currentRound: AuctionRound | null;
+  plan: string | null;
 };
 
 function emptyAgentOpinions(): Record<AgentRole, AgentBid> {
@@ -37,6 +38,7 @@ export function initialAuctionRunState(): AuctionRunState {
     tasks: [],
     currentTaskIndex: null,
     currentRound: null,
+    plan: null,
   };
 }
 
@@ -104,6 +106,7 @@ export function applyAuctionEvent(
         tasks: event.tasks,
         currentTaskIndex: null,
         currentRound: null,
+        plan: event.plan,
       };
 
     case AuctionEventType.Error:

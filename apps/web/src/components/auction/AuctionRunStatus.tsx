@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { cn } from "cn";
+import { AGENT_ROLES } from "@bidding-agents/auction/types";
 import { useShallow } from "zustand/react/shallow";
 
 import {
@@ -12,29 +11,21 @@ import {
   roundLabel,
   taskLotState,
 } from "@/components/auction/auction-run-display";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import BidderSection from "@/components/bidder/BidderSection";
+import { BidderSectionLayout } from "@/components/bidder/BidderSectionLayout";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useAuctionStore } from "@/stores/auction-store";
 
-type AuctionRunStatusProps = {
-  viewTaskIndex: number | null;
-  onViewTaskIndexChange: (index: number) => void;
-};
-
-export function AuctionRunStatus({
-  viewTaskIndex,
-  onViewTaskIndexChange,
-}: AuctionRunStatusProps) {
+export function AuctionRunStatus() {
   const {
-    problem,
     phase,
     lotActivity,
     errorMessage,
@@ -43,7 +34,6 @@ export function AuctionRunStatus({
     currentRound,
   } = useAuctionStore(
     useShallow((s) => ({
-      problem: s.problem,
       phase: auctionRunPhase(s.lastEventType),
       lotActivity: s.lotActivity,
       errorMessage: s.errorMessage,
@@ -72,11 +62,6 @@ export function AuctionRunStatus({
 
   return (
     <Card className="w-full">
-      {problem ? (
-        <CardHeader>
-          <CardDescription className="line-clamp-2">{problem}</CardDescription>
-        </CardHeader>
-      ) : null}
       <CardContent className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="text-sm">{status}</CardTitle>
@@ -99,33 +84,29 @@ export function AuctionRunStatus({
           </Alert>
         ) : null}
         {tasks.length > 0 ? (
-          <ol className="flex flex-col gap-1.5">
-            {tasks.map((task, index) => {
-              const state = taskLotState(index, currentTaskIndex, done);
-              const selected = viewTaskIndex === index;
-              return (
-                <li key={index}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onViewTaskIndexChange(index)}
-                    className={cn(
-                      "h-auto w-full justify-start px-2 py-1.5 text-left font-normal",
-                      selected && "bg-muted",
-                    )}
-                  >
-                    <span className="flex items-start gap-2">
-                      <TaskMarker state={state} />
-                      <span className="min-w-0 font-medium">
-                        Lot {index + 1}. {task.title}
-                      </span>
+          <Accordion multiple>
+            {tasks.map((task, index) => (
+              <AccordionItem key={index} value={index}>
+                <AccordionTrigger>
+                  <span className="flex items-start gap-2">
+                    <TaskMarker
+                      state={taskLotState(index, currentTaskIndex, done)}
+                    />
+                    <span className="min-w-0 font-medium">
+                      Lot {index + 1}. {task.title}
                     </span>
-                  </Button>
-                </li>
-              );
-            })}
-          </ol>
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <BidderSectionLayout>
+                    {AGENT_ROLES.map((role) => (
+                      <BidderSection key={role} role={role} taskIndex={index} />
+                    ))}
+                  </BidderSectionLayout>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         ) : null}
       </CardContent>
     </Card>
@@ -149,25 +130,4 @@ function TaskMarker({
       aria-hidden
     />
   );
-}
-
-export function useViewTaskIndex() {
-  const phase = useAuctionStore((s) => auctionRunPhase(s.lastEventType));
-  const currentTaskIndex = useAuctionStore((s) => s.currentTaskIndex);
-  const taskCount = useAuctionStore((s) => s.tasks.length);
-  const [viewTaskIndex, setViewTaskIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (currentTaskIndex !== null) {
-      setViewTaskIndex(currentTaskIndex);
-    }
-  }, [currentTaskIndex]);
-
-  useEffect(() => {
-    if (phase === AuctionRunPhase.Done && taskCount > 0) {
-      setViewTaskIndex(taskCount - 1);
-    }
-  }, [phase, taskCount]);
-
-  return [viewTaskIndex, setViewTaskIndex] as const;
 }
