@@ -6,6 +6,7 @@ import {
   CompareColumn,
   type CompareView,
 } from "@/components/compare/CompareColumn";
+import { AppOutput } from "@/components/app/AppOutput";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function CompareSection({
@@ -32,13 +33,13 @@ export function CompareSection({
         <CompareColumn
           title="Auction"
           view={view}
-          outputPlaceholder="Auction app"
+          output={<AppOutput side="auction" />}
           details={auctionDetails}
         />
         <CompareColumn
           title="Direct"
           view={view}
-          outputPlaceholder="Direct app"
+          output={<AppOutput side="direct" />}
           details={directDetails}
         />
       </div>

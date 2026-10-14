@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { useAppBuildStore } from "@/stores/app-build-store";
+
 type DirectStore = {
   plan: string | null;
   pending: boolean;
@@ -36,6 +38,7 @@ export const useDirectStore = create<DirectStore>((set) => {
           return;
         }
         set({ plan: data.plan, pending: false });
+        void useAppBuildStore.getState().startBuild("direct", data.plan);
       } catch {
         if (controller.signal.aborted) return;
         set({ pending: false, error: "Direct plan failed" });

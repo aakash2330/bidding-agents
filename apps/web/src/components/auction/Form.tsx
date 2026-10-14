@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { openAuctionEventSource } from "./open-auction-event-source";
+import { useAppBuildStore } from "@/stores/app-build-store";
 import { useAuctionStore } from "@/stores/auction-store";
 import { useDirectStore } from "@/stores/direct-store";
 
@@ -36,6 +37,7 @@ export function AuctionForm() {
     setError(null);
     setProblem(value);
     resetRun();
+    useAppBuildStore.getState().resetBuilds();
     void startDirectPlan(value);
     setPending(true);
     try {
@@ -59,6 +61,12 @@ export function AuctionForm() {
       const stream = openAuctionEventSource(id, applyEvent);
       closeStreamRef.current = stream.close;
       await stream.done;
+
+      // The auction is final: implement its plan and deploy it.
+      const plan = useAuctionStore.getState().plan;
+      if (plan) {
+        void useAppBuildStore.getState().startBuild("auction", plan);
+      }
     } catch {
       setError("Auction stream failed");
     } finally {

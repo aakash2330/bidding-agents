@@ -32,10 +32,12 @@ export default function BidderSection({
             </span>
           </p>
           {opinion.opinion ? (
-            <p className="text-sm leading-relaxed">{opinion.opinion}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+              {opinion.opinion}
+            </p>
           ) : null}
           {opinion.reason ? (
-            <p className="text-xs leading-relaxed text-muted-foreground">
+            <p className="text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground">
               {opinion.reason}
             </p>
           ) : null}

@@ -25,6 +25,8 @@ export type PiAgentConfig = {
 	thinkingLevel?: ThinkingLevel;
 	apiKey?: string;
 	cwd?: string;
+	/** Built-in tool allowlist. Defaults to read-only; pass write/edit/bash to let the agent change files. */
+	tools?: readonly string[];
 };
 
 export type RunPiAgentOptions = PiAgentConfig & {
@@ -92,9 +94,9 @@ function sessionManagerForTurn(cwd: string, options: RunPiAgentTurnOptions): Ses
 	return SessionManager.create(cwd);
 }
 
-function sessionTools(customTools?: ToolDefinition[]): string[] {
+function sessionTools(tools: readonly string[] | undefined, customTools?: ToolDefinition[]): string[] {
 	const names = customTools?.map((tool) => tool.name) ?? [];
-	return [...DEFAULT_PI_TOOLS, ...names];
+	return [...(tools ?? DEFAULT_PI_TOOLS), ...names];
 }
 
 async function createPiSession(options: RunPiAgentOptions, sessionManager: SessionManager) {
@@ -112,7 +114,7 @@ async function createPiSession(options: RunPiAgentOptions, sessionManager: Sessi
 		sessionManager,
 		cwd,
 		thinkingLevel: options.thinkingLevel ?? DEFAULT_PI_AGENT.thinkingLevel,
-		tools: sessionTools(options.customTools),
+		tools: sessionTools(options.tools, options.customTools),
 		...(options.customTools ? { customTools: options.customTools } : {}),
 	});
 

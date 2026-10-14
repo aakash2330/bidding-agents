@@ -27,9 +27,11 @@
       "dependencies": {
         "@base-ui/react": "^1.9.0",
         "@bidding-agents/auction": "workspace:*",
+        "@bidding-agents/e2b": "workspace:*",
         "@bidding-agents/pi": "workspace:*",
         "class-variance-authority": "^0.7.1",
         "cn": "^0.4.0",
+        "e2b": "^2.55.0",
         "lucide-react": "^1.55.0",
         "next": "16.4.0",
         "react": "19.3.0",

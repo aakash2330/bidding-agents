@@ -48,6 +48,12 @@ function buildAuctionBrief(
         "Ordered lots are auctioned one at a time. Each lot: submit_bid, then see every bidder's bids, then submit_bid again.",
         `Your final bid for a lot is deducted from your balance. Starting balance: ${INITIAL_CREDITS} credits across all lots.`,
         "",
+        "Credits:",
+        `- You have ${INITIAL_CREDITS} credits — one shared budget covering every lot in this plan.`,
+        "- Unspent credits are worth nothing at the end: they are not banked, refunded, or rewarded. There is no prize for finishing with credits left, so do not hoard them.",
+        "- Bid carefully but fully: for each lot, bid what that lot is actually worth to you, while keeping enough to compete for the lots you still want to win.",
+        "- Plan to consume the entire budget across the plan — by the final lot, aim to have spent your credits in proportion to how much each lot mattered to you.",
+        "",
         "Participants:",
         roster,
         "",
@@ -59,6 +65,7 @@ function buildAuctionBrief(
 class Agent {
     private auctionBrief = "";
     private sessionStarted = false;
+    private remainingLots = 0;
 
     constructor(
         private readonly sessionId: string,
@@ -71,8 +78,12 @@ class Agent {
         this.auctionBrief = brief;
     }
 
+    setRemainingLots(count: number): void {
+        this.remainingLots = count;
+    }
+
     public async bid(task: Task): Promise<AgentOpinion> {
-        return this.submitBid("Submit your bid with a one-line opinion and one-line reason.", task);
+        return this.submitBid("Submit your bid with your opinion and reason.", task);
     }
 
     public async verify(
@@ -80,8 +91,12 @@ class Agent {
     ): Promise<AgentOpinion> {
         const summary = Object.entries(agentsOpinions)
             .map(([personality, { bid, opinion, reason }]) =>
-                `- ${personality}: ${bid} credits — ${opinion} | ${reason}`)
-            .join("\n");
+                [
+                    `### ${personality} — ${bid} credits`,
+                    `Opinion: ${opinion}`,
+                    `Reason: ${reason}`,
+                ].join("\n"))
+            .join("\n\n");
         return this.submitBid(
             [
                 "All agents' bids for this task:",
@@ -101,7 +116,13 @@ class Agent {
                 "",
             );
         }
-        promptParts.push(`You have ${this.credits} credits available.`);
+        const spent = INITIAL_CREDITS - this.credits;
+        const lotsLeft = this.remainingLots === 1
+            ? "this is the final lot; leftover credits have no value after it"
+            : `${this.remainingLots} lots left including this one`;
+        promptParts.push(
+            `You have ${this.credits} credits available (of ${INITIAL_CREDITS} total; ${spent} spent so far; ${lotsLeft}).`,
+        );
         if (task) {
             promptParts.push("", `Task: ${task.title}`, task.description);
         }
@@ -162,14 +183,16 @@ export class Auction {
             agent.setAuctionBrief(brief);
         }
 
-        for (let index = 0; index < this.tasks.length; index++) {
-            const task = this.tasks[index];
+        for (const [index, task] of this.tasks.entries()) {
             onEvent({
                 type: AuctionEventType.LotStarted,
                 index,
                 title: task.title,
                 description: task.description,
             });
+            for (const agent of this.agents) {
+                agent.setRemainingLots(this.tasks.length - index);
+            }
             await this.collectOpinions(task, (agent) => agent.bid(task));
             onEvent({
                 type: AuctionEventType.RoundComplete,

@@ -2,6 +2,9 @@
   "name": "@bidding-agents/e2b",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/deploy.ts"
+  },
   "scripts": {
     "demo": "bun demo.ts"
   },

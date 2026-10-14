@@ -7,12 +7,12 @@ export type CompareView = "details" | "output";
 export function CompareColumn({
   title,
   view,
-  outputPlaceholder,
+  output,
   details,
 }: {
   title: string;
   view: CompareView;
-  outputPlaceholder: string;
+  output: ReactNode;
   details: ReactNode;
 }) {
   return (
@@ -22,14 +22,7 @@ export function CompareColumn({
         <div className="flex flex-col gap-4">{details}</div>
       ) : (
         <Card className="overflow-hidden py-0">
-          <CardContent className="p-0">
-            <div
-              className="flex aspect-video w-full items-center justify-center bg-muted/40 text-sm text-muted-foreground"
-              aria-hidden
-            >
-              {outputPlaceholder}
-            </div>
-          </CardContent>
+          <CardContent className="p-0">{output}</CardContent>
         </Card>
       )}
     </section>
